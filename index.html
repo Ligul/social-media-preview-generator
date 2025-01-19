@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Social Media Preview Generator</title>
+        <link
+            href="https://bootswatch.com/5/lux/bootstrap.min.css"
+            rel="stylesheet"
+        />
+        <link
+            href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css"
+            rel="stylesheet"
+        />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+        <script src="StackBlur/dist/stackblur.js"></script>
+        <style>
+            #capture {
+                position: relative;
+                max-width: 100%;
+                margin: auto;
+                overflow: hidden;
+            }
+            #content {
+                width: 100%;
+                padding: 0;
+                margin: 0;
+                transform: scale(1.5);
+                transform-origin: 0 0;
+                overflow: hidden;
+            }
+            .preview-thumbnail {
+                max-width: 200px;
+                height: auto;
+                margin: 10px 0;
+            }
+            .preview-container {
+                position: relative;
+                overflow: hidden;
+            }
+            .preview-background {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-size: cover;
+                background-position: center;
+            }
+            .preview-content {
+                position: relative;
+                z-index: 1;
+                padding: 20px;
+                color: white;
+            }
+            .layout-1 {
+                text-align: center;
+            }
+            .layout-2 {
+                text-align: left;
+                padding-left: 40px;
+            }
+            .layout-3 {
+                text-align: right;
+                padding-right: 40px;
+            }
+            .font-1 {
+                font-family: Arial, sans-serif;
+            }
+            .font-2 {
+                font-family: Georgia, serif;
+            }
+            .font-3 {
+                font-family: "Trebuchet MS", sans-serif;
+            }
+        </style>
+    </head>
+    <body class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h1>Social Media Preview Generator</h1>
+            <a href="/services-hub" class="btn btn-primary"> Other Services </a>
+        </div>
+        <p class="text-muted mb-4">
+            Generate Open Graph and Twitter Card previews for your website.
+        </p>
+
+        <div class="row g-3">
+            <div class="col-12">
+                <div class="input-group">
+                    <input
+                        type="url"
+                        class="form-control"
+                        id="urlInput"
+                        placeholder="Enter website URL"
+                    />
+                    <button
+                        class="btn btn-primary"
+                        onclick="generatePreviews()"
+                    >
+                        Load
+                    </button>
+                </div>
+            </div>
+
+            <div id="sourceContainer" style="position: absolute; left: -9999px">
+                <div class="card" id="capture">
+                    <div class="card-body">
+                        <div id="content"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="text-center d-none" id="loading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Generating previews...</p>
+                </div>
+                <div class="alert alert-danger d-none" id="error">
+                    Failed to load content. The site might be unavailable or
+                    blocking access.
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Preview Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Title</label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="titleInput"
+                                    onchange="updatePreviews()"
+                                />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Description</label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="descriptionInput"
+                                    onchange="updatePreviews()"
+                                />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">URL</label>
+                                <input
+                                    type="url"
+                                    class="form-control"
+                                    id="siteUrlInput"
+                                    onchange="updatePreviews()"
+                                />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Image</label>
+                                <!-- inline - zero margins inside -->
+                                <div class="d-flex align-items-center" style="">
+                                    <input
+                                        type="file"
+                                        class="form-control"
+                                        id="imageInput"
+                                        accept="image/*"
+                                        onchange="handleImageUpload(event)"
+                                    />
+                                    <div
+                                        id="imagePreviewContainer"
+                                        class="preview-container position-relative d-none"
+                                        style="
+                                            width: 45px;
+                                            height: 45px;
+                                            outline: 1px solid #eceeef;
+                                            margin: 0;
+                                            display: flex;
+                                            justify-content: center;
+                                            align-items: center;
+                                        "
+                                    >
+                                        <img
+                                            id="imagePreview"
+                                            class="preview-thumbnail"
+                                            style="
+                                                width: 100%;
+                                                height: 100%;
+                                                object-fit: cover;
+                                            "
+                                        />
+                                        <button
+                                            type="button"
+                                            class="btn-close position-absolute"
+                                            style="
+                                                width: 20px;
+                                                height: 20px;
+                                                background-color: rgba(
+                                                    255,
+                                                    255,
+                                                    255,
+                                                    0.8
+                                                );
+                                                border-radius: 50%;
+                                                display: flex;
+                                                justify-content: center;
+                                                align-items: center;
+                                                border: 1px solid #eceeef;
+                                                cursor: pointer;
+                                            "
+                                            onclick="clearImageSelection()"
+                                            aria-label="Close"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Layout</label>
+                                <select
+                                    class="form-select"
+                                    id="layoutSelect"
+                                    onchange="updateSettings()"
+                                >
+                                    <option value="1">Centered</option>
+                                    <option value="2">Left-aligned</option>
+                                    <option value="3">Right-aligned</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Font</label>
+                                <select
+                                    class="form-select"
+                                    id="fontSelect"
+                                    onchange="updateSettings()"
+                                >
+                                    <option value="1">Modern Sans-serif</option>
+                                    <option value="2">Classic Serif</option>
+                                    <option value="3">Contemporary Sans</option>
+                                </select>
+                            </div>
+                            <!-- background color -->
+                            <div class="col-md-4">
+                                <label class="form-label"
+                                    >Background Color</label
+                                >
+                                <input
+                                    type="color"
+                                    class="form-control"
+                                    style="height: 38px"
+                                    id="bgColor"
+                                    onchange="updateSettings()"
+                                />
+                            </div>
+                            <!-- text color -->
+                            <div class="col-md-4">
+                                <label class="form-label">Text Color</label>
+                                <input
+                                    type="color"
+                                    class="form-control"
+                                    style="height: 38px"
+                                    id="textColor"
+                                    onchange="updateSettings()"
+                                />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label"
+                                    >Text Shadow Opacity</label
+                                >
+                                <input
+                                    type="range"
+                                    class="form-range"
+                                    id="shadowOpacity"
+                                    min="0"
+                                    max="100"
+                                    onchange="updateSettings()"
+                                />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label"
+                                    >Background Blur</label
+                                >
+                                <input
+                                    type="range"
+                                    class="form-range"
+                                    id="blurAmount"
+                                    min="0"
+                                    max="30"
+                                    onchange="updateSettings()"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    Open Graph Preview
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div
+                                    id="ogPreviewContainer"
+                                    class="preview-container mb-3"
+                                    style="aspect-ratio: 1.9047 / 1"
+                                >
+                                    <div class="preview-background"></div>
+                                    <div class="preview-content"></div>
+                                </div>
+                                <div class="d-flex" style="display: flex">
+                                    <button
+                                        class="btn btn-primary"
+                                        style="
+                                            flex: 1;
+                                            margin: 0;
+                                            border-radius: 0;
+                                        "
+                                        onclick="renderAndDownload('ogPreviewContainer', 'jpg')"
+                                    >
+                                        Download JPG
+                                    </button>
+                                    <button
+                                        class="btn btn-dark"
+                                        style="
+                                            flex: 1;
+                                            margin: 0;
+                                            border-radius: 0;
+                                            max-width: 20%;
+                                        "
+                                        onclick="renderAndDownload('ogPreviewContainer', 'webp')"
+                                    >
+                                        WEBP
+                                    </button>
+                                    <button
+                                        class="btn btn-dark"
+                                        style="
+                                            flex: 1;
+                                            margin: 0;
+                                            border-radius: 0;
+                                            max-width: 15%;
+                                        "
+                                        onclick="renderAndDownload('ogPreviewContainer', 'png')"
+                                    >
+                                        PNG
+                                    </button>
+                                </div>
+                                <div class="position-relative">
+                                    <pre
+                                        class="bg-light p-3 mt-3"
+                                    ><code id="ogCode"></code></pre>
+                                    <i
+                                        class="bi bi-clipboard position-absolute"
+                                        style="
+                                            top: 5px;
+                                            right: 10px;
+                                            font-size: 1rem;
+                                            color: black;
+                                            cursor: pointer;
+                                        "
+                                        onclick="copyToClipboard('ogCode')"
+                                        title="Copy to clipboard"
+                                    ></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    Twitter Card Preview
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div
+                                    id="twitterPreviewContainer"
+                                    class="preview-container mb-3"
+                                    style="aspect-ratio: 2 / 1"
+                                >
+                                    <div class="preview-background"></div>
+                                    <div class="preview-content"></div>
+                                </div>
+                                <div class="d-flex" style="display: flex">
+                                    <button
+                                        class="btn btn-primary"
+                                        style="
+                                            flex: 1;
+                                            margin: 0;
+                                            border-radius: 0;
+                                        "
+                                        onclick="renderAndDownload('twitterPreviewContainer', 'jpg')"
+                                    >
+                                        Download JPG
+                                    </button>
+                                    <button
+                                        class="btn btn-dark"
+                                        style="
+                                            flex: 1;
+                                            margin: 0;
+                                            border-radius: 0;
+                                            max-width: 20%;
+                                        "
+                                        onclick="renderAndDownload('twitterPreviewContainer', 'webp')"
+                                    >
+                                        WEBP
+                                    </button>
+                                    <button
+                                        class="btn btn-dark"
+                                        style="
+                                            flex: 1;
+                                            margin: 0;
+                                            border-radius: 0;
+                                            max-width: 15%;
+                                        "
+                                        onclick="renderAndDownload('twitterPreviewContainer', 'png')"
+                                    >
+                                        PNG
+                                    </button>
+                                </div>
+                                <div class="position-relative">
+                                    <pre
+                                        class="bg-light p-3 mt-3"
+                                    ><code id="twitterCode"></code></pre>
+                                    <i
+                                        class="bi bi-clipboard position-absolute"
+                                        style="
+                                            top: 5px;
+                                            right: 10px;
+                                            font-size: 1rem;
+                                            color: black;
+                                            cursor: pointer;
+                                        "
+                                        onclick="copyToClipboard('twitterCode')"
+                                        title="Copy to clipboard"
+                                    ></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            const SIZES = {
+                og: { width: 1200, height: 630 },
+                twitter: { width: 1200, height: 600 },
+            };
+
+            function copyToClipboard(codeId) {
+                const codeElement = document.getElementById(codeId);
+                const textToCopy =
+                    codeElement.innerText || codeElement.textContent;
+
+                navigator.clipboard
+                    .writeText(textToCopy)
+                    .then(() => {
+                        // alert("Code copied to clipboard!");
+                        console.log("Code copied to clipboard!");
+                    })
+                    .catch((err) => {
+                        console.error("Failed to copy text: ", err);
+                    });
+            }
+
+            function loadSettings() {
+                const settings = {
+                    layout:
+                        localStorage.getItem("preview-generator-layout") || "1",
+                    font: localStorage.getItem("preview-generator-font") || "1",
+                    shadowOpacity:
+                        localStorage.getItem("preview-generator-shadow") ||
+                        "50",
+                    blurAmount:
+                        localStorage.getItem("preview-generator-blur") || "5",
+                    bgColor:
+                        localStorage.getItem("preview-generator-bgColor") ||
+                        "#808080",
+                    textColor:
+                        localStorage.getItem("preview-generator-textColor") ||
+                        "#ffffff",
+                };
+
+                document.getElementById("layoutSelect").value = settings.layout;
+                document.getElementById("fontSelect").value = settings.font;
+                document.getElementById("shadowOpacity").value =
+                    settings.shadowOpacity;
+                document.getElementById("blurAmount").value =
+                    settings.blurAmount;
+                document.getElementById("bgColor").value = settings.bgColor;
+                document.getElementById("textColor").value = settings.textColor;
+
+                return settings;
+            }
+
+            function updateSettings() {
+                const settings = {
+                    layout: document.getElementById("layoutSelect").value,
+                    font: document.getElementById("fontSelect").value,
+                    shadowOpacity:
+                        document.getElementById("shadowOpacity").value,
+                    blurAmount: document.getElementById("blurAmount").value,
+                    bgColor: document.getElementById("bgColor").value,
+                    textColor: document.getElementById("textColor").value,
+                };
+
+                localStorage.setItem(
+                    "preview-generator-layout",
+                    settings.layout
+                );
+                localStorage.setItem("preview-generator-font", settings.font);
+                localStorage.setItem(
+                    "preview-generator-shadow",
+                    settings.shadowOpacity
+                );
+                localStorage.setItem(
+                    "preview-generator-blur",
+                    settings.blurAmount
+                );
+                localStorage.setItem(
+                    "preview-generator-bgColor",
+                    settings.bgColor
+                );
+                localStorage.setItem(
+                    "preview-generator-textColor",
+                    settings.textColor
+                );
+
+                updatePreviews();
+            }
+
+            async function handleImageUpload(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        document.getElementById("imagePreview").src =
+                            e.target.result;
+                        document
+                            .getElementById("imagePreviewContainer")
+                            .classList.remove("d-none");
+                        updatePreviews();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            function clearImageSelection() {
+                document.getElementById("imageInput").value = "";
+                document.getElementById("imagePreview").src = "";
+                document
+                    .getElementById("imagePreviewContainer")
+                    .classList.add("d-none");
+                updatePreviews();
+            }
+
+            async function generatePreviews() {
+                const url = document.getElementById("urlInput").value;
+                if (!url) return;
+
+                const content = document.getElementById("content");
+                const loading = document.getElementById("loading");
+                const error = document.getElementById("error");
+
+                content.innerHTML = "";
+                loading.classList.remove("d-none");
+                error.classList.add("d-none");
+
+                try {
+                    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(
+                        url
+                    )}`;
+                    const response = await fetch(proxyUrl);
+                    if (!response.ok)
+                        throw new Error("Failed to fetch content");
+                    const html = await response.text();
+
+                    const shadowRootContainer = document.createElement("div");
+                    content.appendChild(shadowRootContainer);
+                    const shadowRoot = shadowRootContainer.attachShadow({
+                        mode: "open",
+                    });
+
+                    const doc = new DOMParser().parseFromString(
+                        html,
+                        "text/html"
+                    );
+
+                    document.getElementById("titleInput").value = doc.title;
+                    document.getElementById("siteUrlInput").value = url;
+                    document.getElementById("descriptionInput").value =
+                        doc.querySelector('meta[name="description"]')
+                            ?.content || "";
+
+                    const styles = doc.querySelectorAll(
+                        'style, link[rel="stylesheet"]'
+                    );
+                    styles.forEach((style) => {
+                        shadowRoot.appendChild(style.cloneNode(true));
+                    });
+
+                    const tempDiv = document.createElement("div");
+                    tempDiv.innerHTML = doc.body.innerHTML;
+                    shadowRoot.appendChild(tempDiv);
+
+                    // add scale 1.5 to content
+                    shadowRootContainer.style.transform = `scale(1.5)`;
+
+                    // scale container so content fits
+                    const scale = Math.min(
+                        SIZES.og.width / shadowRootContainer.offsetWidth,
+                        SIZES.og.height / shadowRootContainer.offsetHeight
+                    );
+                    shadowRootContainer.style.transform = `scale(${scale})`;
+
+                    // Put preview to image upload input
+                    html2canvas(shadowRootContainer, {
+                        width: shadowRootContainer.offsetWidth,
+                        height: shadowRootContainer.offsetHeight,
+                    }).then((canvas) => {
+                        document.getElementById("imagePreview").src =
+                            canvas.toDataURL();
+                        document
+                            .getElementById("imagePreviewContainer")
+                            .classList.remove("d-none");
+                    });
+
+                    // guess accent color
+                    const accentColor =
+                        getComputedStyle(shadowRootContainer).color;
+                    document.getElementById("textColor").value = accentColor;
+
+                    await new Promise((resolve) => setTimeout(resolve, 1000));
+                    updateSettings();
+                    updatePreviews();
+                } catch (err) {
+                    console.error("Error:", err);
+                    error.classList.remove("d-none");
+                } finally {
+                    loading.classList.add("d-none");
+                }
+            }
+
+            function updatePreviews() {
+                const settings = loadSettings();
+                const title = document.getElementById("titleInput").value;
+                const description =
+                    document.getElementById("descriptionInput").value;
+                const url = document.getElementById("siteUrlInput").value;
+                const image = document.getElementById("imagePreview").src;
+                const bgColor = settings.bgColor;
+                const textColor = settings.textColor;
+
+                const containers = [
+                    "ogPreviewContainer",
+                    "twitterPreviewContainer",
+                ];
+                containers.forEach((containerId) => {
+                    const container = document.getElementById(containerId);
+                    const background = container.querySelector(
+                        ".preview-background"
+                    );
+                    const content = container.querySelector(".preview-content");
+
+                    background.style.backgroundImage = `url(${image})`;
+                    background.style.filter = `blur(${settings.blurAmount}px)`;
+                    background.style.backgroundColor = bgColor;
+
+                    content.className = `preview-content layout-${settings.layout} font-${settings.font}`;
+                    content.style.textShadow = `0 0 10px rgba(0,0,0,${
+                        settings.shadowOpacity / 100
+                    })`;
+
+                    content.innerHTML = `
+                                <h2 style="color: ${textColor}">${title}</h2>
+                                <p style="color: ${textColor}">${description}</p>
+                                <small style="color: ${textColor}">${url}</small>
+                            `;
+                });
+
+                updateMetaTags();
+            }
+
+            function updateMetaTags() {
+                const title = document.getElementById("titleInput").value;
+                const description =
+                    document.getElementById("descriptionInput").value;
+                const url = document.getElementById("siteUrlInput").value;
+                const image = document.getElementById("imagePreview").src;
+
+                const ogCode = `<meta property="og:title" content="${title}">
+<meta property="og:description" content="${description}">
+<meta property="og:url" content="${url}">
+<meta property="og:image" content="REPLACE_WITH_IMAGE_URL">
+<meta property="og:type" content="website">`;
+
+                const twitterCode = `<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${title}">
+<meta name="twitter:description" content="${description}">
+<meta name="twitter:image" content="REPLACE_WITH_IMAGE_URL">`;
+
+                document.getElementById("ogCode").textContent = ogCode;
+                document.getElementById("twitterCode").textContent =
+                    twitterCode;
+            }
+
+            function renderAndDownload(containerId, format) {
+                const container = document.getElementById(containerId);
+                const sizes_id = containerId.split("Preview")[0];
+
+                // Get the filename from the domain and container ID
+                const filename = `${
+                    new URL(document.getElementById("siteUrlInput").value)
+                        .hostname
+                }-${sizes_id}.${format}`;
+
+                if (format === "jpg") {
+                    format = "jpeg";
+                }
+
+                const targetWidth = SIZES[sizes_id].width;
+                const targetHeight = SIZES[sizes_id].height;
+
+                // Create a canvas to render the background image
+                const bgCanvas = document.createElement("canvas");
+                bgCanvas.width = targetWidth;
+                bgCanvas.height = targetHeight;
+                const bgCtx = bgCanvas.getContext("2d");
+
+                // Get the background style from the preview container
+                const backgroundStyle = window.getComputedStyle(
+                    container.querySelector(".preview-background")
+                );
+                const backgroundImage = backgroundStyle.backgroundImage.slice(
+                    5,
+                    -2
+                );
+
+                // Get the blur radius from the CSS filter property
+                const blurRadius = parseInt(
+                    backgroundStyle.filter.match(/blur\((\d+)px\)/)?.[1] || "0"
+                );
+
+                // Create a new image element to load the background image
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.src = backgroundImage;
+
+                img.onload = () => {
+                    // Draw the image on the canvas
+                    bgCtx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+                    // Apply the blur effect using CSS filters
+                    bgCtx.filter = `blur(${blurRadius}px)`; // Apply the blur
+                    bgCtx.drawImage(bgCanvas, 0, 0, targetWidth, targetHeight); // Draw the image on itself
+
+                    // Save the blurred background as a Data URL
+                    const blurredBackgroundUrl =
+                        bgCanvas.toDataURL("image/webp");
+
+                    // Replace the original background with the blurred one
+                    const originalBackground = container.querySelector(
+                        ".preview-background"
+                    );
+                    const originalBackgroundImage =
+                        backgroundStyle.backgroundImage;
+                    originalBackground.style.backgroundImage = `url(${blurredBackgroundUrl})`;
+
+                    // Create a canvas to render the text layer
+                    const textCanvas = document.createElement("canvas");
+                    textCanvas.width = targetWidth;
+                    textCanvas.height = targetHeight;
+
+                    // Render the text layer
+                    html2canvas(container, {
+                        canvas: textCanvas,
+                        scale: Math.max(
+                            targetWidth / container.offsetWidth,
+                            targetHeight / container.offsetHeight
+                        ),
+                        useCORS: true,
+                        backgroundColor: "transparent",
+                        width: container.offsetWidth,
+                        height: container.offsetHeight,
+                    }).then((textCanvas) => {
+                        // Restore the original background
+                        originalBackground.style.backgroundImage =
+                            originalBackgroundImage;
+
+                        // Create a canvas to merge the blurred background and text
+                        const finalCanvas = document.createElement("canvas");
+                        finalCanvas.width = targetWidth;
+                        finalCanvas.height = targetHeight;
+                        const finalCtx = finalCanvas.getContext("2d");
+
+                        // Draw the blurred background
+                        finalCtx.drawImage(bgCanvas, 0, 0);
+
+                        // Draw the text canvas on top
+                        finalCtx.drawImage(textCanvas, 0, 0);
+
+                        // Save the final canvas as a downloadable image
+                        const dataUrl = finalCanvas.toDataURL(
+                            `image/${format}`
+                        );
+                        const a = document.createElement("a");
+                        a.href = dataUrl;
+                        a.download = filename;
+                        a.click();
+                    });
+                };
+            }
+
+            loadSettings();
+        </script>
+    </body>
+</html>
